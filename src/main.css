@@ -1,0 +1,295 @@
+/* General Styling */
+body {
+	margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+	font-family: 'Inter', sans-serif;
+    background-color: #D3D3D3; /* Match Three.js background */
+    display: flex;
+    flex-direction: column;
+}
+/* Control Buttons - Positioned Over Three.js */
+#control-buttons {
+    position: absolute;
+    bottom: 140px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+    z-index: 100; /* ✅ Ensures it appears above Three.js */
+    pointer-events: auto; /* ✅ Allows clicking */
+}
+
+/* Stadium Style Buttons */
+#control-buttons button {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* ✅ Space between icon and text */
+    padding: 12px 25px;
+    font-size: 1em;
+    background:  #494949;
+    color: white;
+    border: none;
+    border-radius: 50px; /* ✅ Creates stadium shape */
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease-in-out;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    font-weight: bold;
+}
+
+/* Button Icons */
+#control-buttons button img {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1); /* ✅ Makes static icons white */
+}
+
+/* Special Styling for GIF */
+#loading-icon {
+    width: 24px;
+    height: 24px;
+    filter: none; /* ✅ Keep original GIF colors */
+}
+
+/* Hover Effect */
+#control-buttons button:hover {
+    background: #c0392b;
+    transform: scale(1.05);
+}
+
+/* Click Effect */
+#control-buttons button:active {
+    transform: scale(0.95);
+}
+/* Ensure Three.js Canvas is Correctly Behind UI */
+#three-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0; /* Ensure it's not blocking */
+    display: block;
+    pointer-events: auto; /* ✅ Allow user interaction */
+}
+
+/* Welcome Screen */
+#welcome-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #969696; /* Grey background */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    text-align: center;
+    transition: opacity 0.5s ease-in-out;
+}
+
+#welcome-screen h1 {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+}
+
+/* Enter Button - Stadium Style */
+#enter-button {
+	margin-top: 40px;
+    padding: 15px 50px;
+    font-size: 1.2em;
+	font-weight: 700;
+    background: #494949;
+    color: white;
+    border: none;
+    border-radius: 50px; /* ✅ Creates stadium effect */
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease-in-out;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Hover Effect */
+#enter-button:hover {
+    background: #c0392b;
+    transform: scale(1.05); /* Slightly enlarge */
+}
+
+/* Click Effect */
+#enter-button:active {
+    transform: scale(0.95); /* Slight shrink */
+}
+
+/* Title Styling */
+#title-container {
+    position: absolute;
+    top: 3%;
+    left: 15%;
+    transform: translate(-50%, 0);
+    display: flex;
+    align-items: center;
+    padding: 30px 10px;
+    border-radius: 10px;
+    z-index: 100;
+    pointer-events: none;
+}
+
+#title {
+    font-size: calc(1.5vw + 8px);
+    font-weight: bold;
+    color: black;
+    margin: 0;
+    white-space: nowrap;
+}
+
+#title-icon {
+    width: auto;
+    height: calc(2vw + 12px);
+    margin-right: 15px;
+}
+
+/* Title Level Styling */
+#title-level {
+    position: absolute;
+    top: 3%;
+    left: 50%;
+    transform: translate(-50%, 0);
+    display: flex;
+    align-items: center;
+    padding: 50px 10px;
+    border-radius: 10px;
+    z-index: 100;
+    pointer-events: none;
+}
+
+#titleLevel {
+    font-size: calc(2.2vw + 8px);
+    font-weight: bold;
+    color: rgb(255, 255, 255);
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+    margin: 0;
+    white-space: nowrap;
+}
+
+/* Stats Section */
+#stats {
+    position: absolute;
+    top: 20%;
+    left: 5%;
+    font-size: calc(0.8vw + 6px);
+    color: rgb(255, 255, 255);
+    padding: 140px 35px;
+    border-radius: 8px;
+    z-index: 100;
+}
+
+.stat {
+    margin-bottom: 20px;
+}
+
+.value {
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.value.warning {
+    color: #ff6600;
+}
+
+/* Chart Container */
+#charts-container {
+    position: absolute;
+    top: 10%;
+    right: 2%;
+    width: 350px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 100;
+    /* background: rgba(255, 255, 255, 0.95); */
+    padding: 15px;
+    border-radius: 12px;
+    /* box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2); */
+}
+/* Home Button */
+#home-button {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+    transition: transform 0.2s ease-in-out;
+}
+
+/* Home Icon (White by Default & Shadow) */
+#home-button img {
+    width: 40px;
+    height: 40px;
+    filter: brightness(0) invert(1); /* ✅ Makes the icon completely white */
+    filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.5)); /* ✅ Adds shadow */
+    transition: filter 0.2s ease-in-out;
+}
+
+/* Hover Effect - Change Icon to Grey */
+#home-button:hover img {
+    filter: brightness(0) invert(0.5); /* ✅ Turns grey on hover */
+}
+
+#home-button:hover {
+    transform: translateX(-50%) scale(1.1);
+}
+
+
+/* Chart Canvas */
+canvas {
+    /* background: rgba(255, 255, 255, 0.9); */
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    height: 120px;
+}
+#grid-container {
+    display: grid;
+    grid-template-columns: repeat(10, 50px); /* Adjust columns based on your grid */
+    grid-gap: 10px;
+}
+
+.circle {
+    border-radius: 50%;
+    background-color: #007bff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 12px;
+    text-align: center;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+    #title-container {
+        left: 50%;
+        transform: translate(-50%, 0);
+    }
+
+    #charts-container {
+		/* background: rgba(255, 255, 255, 0.8);  Reduce opacity */
+		padding: 10px;
+		border-radius: 10px;
+		box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    canvas {
+		background: none; /* Remove default white background */
+    }
+}

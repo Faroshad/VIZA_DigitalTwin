@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Digital Twin</title>
+    <link rel="icon" type="image/png" href="models/icon.png">
+    <link rel="stylesheet" href="main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js Library -->
+
+    <!-- Three.js Import Map (Loads Modules from CDN) -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@latest/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@latest/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+		<!-- Control Buttons -->
+		<div id="control-buttons">
+			<button id="start-recording">
+				<img src="./models/record.png" alt="Record Icon"> Start Recording
+			</button>
+			<button id="save-recording">
+				<img src="./models/save.png" alt="Save Icon"> Save
+			</button>
+			<button id="load-recording">
+				<img src="./models/loading.png" alt="Loading Icon" id="loading-icon">Load Records
+			</button>
+		</div>
+
+    <!-- Title Section -->
+    <div id="title-container">
+        <img id="title-icon" src="models/icon.png" alt="Icon">
+        <div id="title">Digital Twin Model</div>
+    </div>
+	<div id="grid-container"></div>
+
+    <div id="title-level">
+        <div id="titleLevel">Curing Record</div>
+    </div>
+
+    <!-- Stats Section -->
+    <div id="stats">
+        <div class="stat">Temperature: <span class="value">24°C</span></div>
+        <div class="stat">Hydration: <span class="value">80%</span></div>
+        <div class="stat">Strength: <span class="value">32 MPa</span></div>
+        <div class="stat">Cure Time: <span class="value">14.2 hours</span></div>
+        <div class="stat">Crack Detection: <span class="value warning">WARNING</span></div>
+    </div>
+
+
+
+    <!-- Charts Section -->
+    <div id="charts-container">
+        <canvas id="tempChart"></canvas>   <!-- Bar Chart -->
+        <canvas id="cureTimeChart"></canvas>  <!-- Pie Chart -->
+        <canvas id="humidityChart"></canvas>  <!-- Line Chart -->
+    </div>
+
+    <canvas id="three-canvas"></canvas>
+
+    <!-- Load Three.js & Charts -->
+    <script type="module" src="main.js"></script> <!-- Three.js logic -->
+    <script src="charts.js"></script> <!-- Chart.js logic -->
+	<!-- Home Button -->
+	<a id="home-button" href="welcome.html">
+    <img src="./models/home.png" alt="Home">
+</a>
+
+</body>
+</html>

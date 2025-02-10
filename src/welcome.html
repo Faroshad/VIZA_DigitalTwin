@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome | Digital Twin</title>
+    <link rel="icon" type="image/png" href="models/icon.png">
+    <link rel="stylesheet" href="main.css">
+</head>
+<body>
+    <div id="welcome-screen">
+        <h1>Welcome to our Digital Twin World</h1>
+        <button id="enter-button">Enter</button>
+    </div>
+
+    <script>
+        document.getElementById("enter-button").addEventListener("click", function() {
+            document.getElementById("welcome-screen").style.opacity = "0";
+            setTimeout(() => {
+                window.location.replace("index.html"); // 🔴 Use replace() to force reload
+            }, 500); 
+        });
+    </script>
+</body>
+</html>
