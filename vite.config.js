@@ -1,11 +1,7 @@
-export default {
-	root: 'src/',
-	publicDir: '../public/',
-	base: './',
-	build:
-	{
-		outDir: '../dist',
-		emptyOutDir: true,
-		sourcemap: true
-	}
-}
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  optimizeDeps: {
+    include: ['mqtt'], // ✅ Vite will pre-bundle MQTT correctly
+  },
+});

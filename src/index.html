@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="main.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/mqttws31.min.js"></script>
 
     <!-- Three.js Import Map (Loads Modules from CDN) -->
     <script type="importmap">
@@ -67,6 +68,8 @@
     <!-- Load Three.js & Charts -->
     <script type="module" src="main.js"></script> <!-- Three.js logic -->
     <script src="charts.js"></script> <!-- Chart.js logic -->
+    <script type="module" src="mqtt-update.js"></script>
+
 	<!-- Home Button -->
 	<a id="home-button" href="welcome.html">
     <img src="./models/home.png" alt="Home">

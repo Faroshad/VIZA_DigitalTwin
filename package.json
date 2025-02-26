@@ -1,13 +1,14 @@
 {
   "scripts": {
-    "start": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev": "vite"
   },
   "devDependencies": {
     "vite": "^6.1.0"
   },
   "dependencies": {
+    "mqtt": "^5.10.3",
     "papaparse": "^5.5.2",
     "three": "^0.173.0"
   }
