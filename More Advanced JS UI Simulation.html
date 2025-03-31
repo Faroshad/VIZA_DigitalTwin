@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Concrete Curing Sim</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 1000px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        .grid { display: grid; gap: 20px; margin-bottom: 20px; }
+        .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+        .card { background-color: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #eee; }
+        .card h3 { margin-top: 0; font-size: 1em; color: #555; }
+        .card .value { font-size: 1.8em; font-weight: bold; margin-bottom: 5px; }
+        .card .label { font-size: 0.9em; color: #777; }
+        .controls, .settings { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 20px; padding: 15px; background: #eee; border-radius: 5px;}
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input[type="number"], input[type="range"] { padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; color: white; }
+        .play-btn { background-color: #28a745; }
+        .pause-btn { background-color: #007bff; }
+        .reset-btn { background-color: #6c757d; }
+        .chart-container { height: 300px; margin-bottom: 20px; }
+        .risk-low { color: #22c55e; }
+        .risk-medium { color: #f59e0b; }
+        .risk-high { color: #ef4444; }
+        .progress-bar { background-color: #e9ecef; border-radius: .25rem; height: 10px; overflow: hidden; margin-top: 5px;}
+        .progress-bar-inner { background-color: #007bff; height: 100%; transition: width 0.1s linear; }
+         /* Responsive */
+        @media (max-width: 768px) {
+            .grid-cols-4 { grid-template-columns: repeat(2, 1fr); }
+        }
+         @media (max-width: 480px) {
+            .grid-cols-2, .grid-cols-4 { grid-template-columns: 1fr; }
+            .controls, .settings { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Concrete Curing Simulation</h1>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button id="playPauseBtn" class="play-btn">Play</button>
+            <button id="resetBtn" class="reset-btn">Reset</button>
+            <div>
+                <label for="speedSlider">Speed (<span id="speedLabel">6 hrs/sec</span>):</label>
+                <input type="range" id="speedSlider" min="10" max="1440" step="10" value="360" style="width: 150px;">
+            </div>
+            <div style="margin-left: auto; text-align: right;">
+                <div id="currentTimeDisplay" style="font-size: 1.5em; font-weight: bold;">0d 0h</div>
+                <div class="label">Elapsed Time</div>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="settings grid grid-cols-2">
+             <div>
+                <label for="mixSelect">Concrete Mix:</label>
+                <select id="mixSelect">
+                    <!-- Options added by JS -->
+                </select>
+            </div>
+             <div>
+                <label for="maturityMethodSelect">Maturity Method:</label>
+                <select id="maturityMethodSelect">
+                    <option value="nurse-saul">Nurse-Saul (TTF)</option>
+                    <option value="equivalent-age">Equivalent Age (Arrhenius)</option>
+                    <option value="weighted">Weighted Maturity</option>
+                </select>
+                <div id="maturityParams" style="margin-top: 10px; font-size: 0.9em;">
+                    <!-- Dynamic params here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Status -->
+        <h2>Current Status</h2>
+        <div class="grid grid-cols-4">
+            <div class="card">
+                <h3>Temperature</h3>
+                <div class="value" id="coreTempValue">--°C</div>
+                <div class="label">Core</div>
+                <div style="font-size: 0.9em;">
+                    Surface: <span id="surfaceTempValue">--°C</span><br>
+                    Ambient: <span id="ambientTempValue">--°C</span>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Strength</h3>
+                <div class="value" id="strengthValue">-- MPa</div>
+                <div class="label">Compressive Strength</div>
+                 <div class="progress-bar">
+                     <div id="strengthProgress" class="progress-bar-inner" style="width: 0%;"></div>
+                 </div>
+                <div class="label"><span id="strengthPercent">0</span>% of Design (<span id="designStrength">--</span> MPa)</div>
+            </div>
+            <div class="card">
+                <h3>Humidity / Hydration</h3>
+                 <div class="value" id="humidityValue">-- %</div>
+                 <div class="label">Internal Humidity</div>
+                 <div class="progress-bar">
+                     <div id="hydrationProgress" class="progress-bar-inner" style="width: 0%; background-color: #6f42c1;"></div>
+                 </div>
+                 <div class="label"><span id="hydrationPercent">0</span>% Hydration Complete</div>
+            </div>
+            <div class="card">
+                <h3>Risk Factors</h3>
+                <div style="font-size: 0.9em;">
+                    Thermal Gradient: <strong id="gradientValue">--°C</strong><br>
+                    Thermal Stress: <strong id="stressValue">-- MPa</strong><br>
+                    Tensile Strength: <strong id="tensileStrengthValue">-- MPa</strong><br>
+                    Cracking Risk: <strong id="crackingRiskValue">--</strong>
+                </div>
+                 <div style="margin-top: 10px; font-size: 0.9em;">
+                    Form Removal: <span id="formRemovalStatus">No</span><br>
+                    Loading Ready: <span id="loadingReadyStatus">No</span>
+                 </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <h2>Charts</h2>
+        <div class="grid grid-cols-2">
+            <div class="chart-container">
+                 <canvas id="temperatureChart"></canvas>
+            </div>
+            <div class="chart-container">
+                 <canvas id="strengthChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Global State & Parameters ---
+        let isRunning = false;
+        let simulationSpeed = 360; // minutes per second (initial: 6 hours/sec)
+        let currentTime = 0; // hours
+        let animationFrameId = null;
+        let lastUpdateTime = 0;
+
+        let selectedMix = 'default';
+        let maturityMethod = 'nurse-saul';
+        let datumTemperature = 0; // For Nurse-Saul
+        let activationEnergy = 5000; // For Equivalent Age
+        let cValue = 1.5; // For Weighted Maturity
+
+        let simulationParameters = {}; // Will be populated by selected mix
+
+        const mixLibrary = {
+            'default': { name: 'Standard Mix (w/c=0.5)', cement_content: 350, water_content: 175, w_c_ratio: 0.5, ultimate_strength: 40, rate_constant: 0.0025, ultimate_hydration: 0.7, tensile_strength_factor: 0.1, modulus_elasticity: 30000, thermal_expansion: 10e-6, creep_factor: 1.0 },
+            'high-strength': { name: 'High Strength Mix (w/c=0.4)', cement_content: 425, water_content: 170, w_c_ratio: 0.4, ultimate_strength: 60, rate_constant: 0.0030, ultimate_hydration: 0.65, tensile_strength_factor: 0.09, modulus_elasticity: 35000, thermal_expansion: 9.5e-6, creep_factor: 0.9 },
+            'mass-concrete': { name: 'Mass Concrete Mix', cement_content: 280, water_content: 154, w_c_ratio: 0.55, ultimate_strength: 35, rate_constant: 0.0020, ultimate_hydration: 0.75, tensile_strength_factor: 0.11, modulus_elasticity: 28000, thermal_expansion: 10.5e-6, creep_factor: 1.1 },
+            'rapid-set': { name: 'Rapid Setting Mix', cement_content: 400, water_content: 180, w_c_ratio: 0.45, ultimate_strength: 50, rate_constant: 0.0040, ultimate_hydration: 0.6, tensile_strength_factor: 0.085, modulus_elasticity: 33000, thermal_expansion: 10e-6, creep_factor: 0.95 }
+        };
+
+        const simConfig = {
+            duration: 168, // hours (7 days)
+            time_step: 0.25, // hours (15 min)
+            initial_concrete_temp: 22,
+            initial_ambient_temp: 18,
+            initial_ambient_humidity: 65,
+            initial_wind_speed: 2.5,
+            pour_time: new Date("2025-02-24T08:00:00"),
+            restraint_degree: 0.7
+        };
+
+        // Data arrays
+        let ambientData = [];
+        let temperatureData = [];
+        let maturityData = [];
+        let strengthData = [];
+        let humidityData = [];
+        let riskData = [];
+
+        // Chart instances
+        let tempChart = null;
+        let strengthChart = null;
+
+        // DOM Elements (cache them)
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedLabel = document.getElementById('speedLabel');
+        const currentTimeDisplay = document.getElementById('currentTimeDisplay');
+        const mixSelect = document.getElementById('mixSelect');
+        const maturityMethodSelect = document.getElementById('maturityMethodSelect');
+        const maturityParamsDiv = document.getElementById('maturityParams');
+
+        const coreTempValue = document.getElementById('coreTempValue');
+        const surfaceTempValue = document.getElementById('surfaceTempValue');
+        const ambientTempValue = document.getElementById('ambientTempValue');
+        const strengthValue = document.getElementById('strengthValue');
+        const strengthProgress = document.getElementById('strengthProgress');
+        const strengthPercent = document.getElementById('strengthPercent');
+        const designStrength = document.getElementById('designStrength');
+        const humidityValue = document.getElementById('humidityValue');
+        const hydrationProgress = document.getElementById('hydrationProgress');
+        const hydrationPercent = document.getElementById('hydrationPercent');
+        const gradientValue = document.getElementById('gradientValue');
+        const stressValue = document.getElementById('stressValue');
+        const tensileStrengthValue = document.getElementById('tensileStrengthValue');
+        const crackingRiskValue = document.getElementById('crackingRiskValue');
+        const formRemovalStatus = document.getElementById('formRemovalStatus');
+        const loadingReadyStatus = document.getElementById('loadingReadyStatus');
+
+        // --- Utility Functions ---
+        function formatTime(hours) {
+            const days = Math.floor(hours / 24);
+            const remainingHours = Math.floor(hours % 24);
+            return `${days}d ${remainingHours}h`;
+        }
+
+        function getRiskClass(risk) {
+            if (risk === 'high') return 'risk-high';
+            if (risk === 'medium') return 'risk-medium';
+            return 'risk-low';
+        }
+
+         function calculateSVP(temperature) {
+            return 0.6108 * Math.exp(17.27 * temperature / (temperature + 237.3));
+        }
+
+        // --- Simulation Core Functions (Ported from React) ---
+
+        function generateAmbientConditions(params, config) {
+            const hours = Math.ceil(config.duration / config.time_step);
+            const data = [];
+            const pourHour = config.pour_time.getHours();
+
+            for (let i = 0; i < hours; i++) {
+                const time = i * config.time_step;
+                const timeOfDay = (pourHour + time) % 24;
+
+                const diurnalAdjustment = 5 * Math.sin((timeOfDay - 13) * Math.PI / 12);
+                const temperature = config.initial_ambient_temp + diurnalAdjustment +
+                                 0.8 * Math.sin(time * Math.PI / 72) +
+                                 Math.random() * 1.5 - 0.75;
+
+                const humidityAdjustment = -10 * Math.sin((timeOfDay - 13) * Math.PI / 12);
+                const humidity = Math.max(30, Math.min(95,
+                    config.initial_ambient_humidity + humidityAdjustment +
+                    Math.random() * 5 - 2.5
+                ));
+
+                const windSpeed = Math.max(0.5, Math.min(8,
+                    config.initial_wind_speed +
+                    Math.sin(time * Math.PI / 24) +
+                    Math.random() * 1.0 - 0.5
+                ));
+
+                data.push({ time, temperature, humidity, windSpeed });
+            }
+            return data;
+        }
+
+        function calculateHeatGeneration(time, params) {
+            const baseHeat = 250; // J/g
+            const tau = 15; // hours
+            const beta = 0.8;
+
+            // Clamp time to avoid issues with Math.pow for time=0 or negative
+            const effectiveTime = Math.max(0.01, time);
+            const hydrationDegree = params.mix.ultimate_hydration *
+                                  Math.exp(-Math.pow(tau / effectiveTime, beta));
+
+            const timeFactor = Math.exp(-time / 24);
+            const heatGeneration = hydrationDegree * params.mix.cement_content * 1000 * baseHeat * timeFactor * 0.002;
+
+            return { hydrationDegree, heatGeneration };
+        }
+
+        function simulateConcreteTemperature(ambient, params, config) {
+            const tempData = [];
+            let currentTemp = config.initial_concrete_temp;
+            const coolingFactor = 0.08;
+            const initialAmbientTemp = ambient[0].temperature;
+            const maxTempRise = 25; // Simplified max rise
+
+            for (let i = 0; i < ambient.length; i++) {
+                const time = ambient[i].time;
+                const ambientTemp = ambient[i].temperature;
+                const windSpeed = ambient[i].windSpeed;
+
+                const { hydrationDegree } = calculateHeatGeneration(time, params);
+
+                // Simplified Temperature Model (similar logic to original)
+                 const targetTemp = initialAmbientTemp + maxTempRise * hydrationDegree * Math.exp(-time / 48); // Target based on hydration
+                 const tempDifferential = currentTemp - ambientTemp;
+                 const heatLoss = coolingFactor * tempDifferential * (1 + windSpeed / 20);
+                 const adjustmentRate = 0.1 * config.time_step;
+
+                if (time < 48) {
+                    currentTemp = currentTemp + (targetTemp - currentTemp) * adjustmentRate - heatLoss * 0.2 * config.time_step;
+                } else {
+                    currentTemp = currentTemp - heatLoss * config.time_step;
+                }
+                // Ensure temperature stays realistic (e.g., not below ambient unless significant cooling)
+                 currentTemp = Math.max(ambientTemp - 5, currentTemp); // Prevent unrealistic drops below ambient
+
+                 const surfaceTemp = ambientTemp + (currentTemp - ambientTemp) * 0.7; // Simple surface model
+
+                 tempData.push({
+                     time,
+                     hydrationDegree,
+                     coreTemperature: currentTemp,
+                     surfaceTemperature: surfaceTemp,
+                     ambientTemperature: ambientTemp
+                 });
+            }
+            return tempData;
+        }
+
+        function calculateMaturity(tempData, params, config, method, dTemp, actEnergy, cVal) {
+            const matData = [];
+            let maturity = 0;
+
+            for (let i = 0; i < tempData.length; i++) {
+                const time = tempData[i].time;
+                const coreTemp = tempData[i].coreTemperature;
+                const timeStep = config.time_step;
+                let increment = 0;
+
+                if (method === 'nurse-saul') {
+                    increment = Math.max(0, coreTemp - dTemp) * timeStep;
+                } else if (method === 'equivalent-age') {
+                    const referenceTemp = 23; // °C
+                     // Prevent division by zero or issues with log at low temps near absolute zero
+                     const T_K = coreTemp + 273.15;
+                     const T_ref_K = referenceTemp + 273.15;
+                     if (T_K > 0 && T_ref_K > 0) {
+                        increment = Math.exp(-actEnergy * (1/T_K - 1/T_ref_K)) * timeStep;
+                     }
+                } else if (method === 'weighted') {
+                    // Ensure C-value is valid for log and power
+                    if (cVal > 0 && cVal !== 1) {
+                         const n = 0.1 * coreTemp - 1.245;
+                         const pow_n = Math.pow(cVal, n);
+                         const pow_base = Math.pow(cVal, -1.245);
+                         // Avoid potential issues if pow results are very large/small or NaN
+                         if (isFinite(pow_n) && isFinite(pow_base)) {
+                             increment = (10 * (pow_n - pow_base) / Math.log(cVal)) * timeStep;
+                         }
+                    }
+                }
+                // Ensure increment is non-negative
+                maturity += Math.max(0, increment);
+                matData.push({ time, maturity });
+            }
+            return matData;
+        }
+
+         function calculateStrength(matData, params, config) {
+            const strData = [];
+            for (let i = 0; i < matData.length; i++) {
+                const time = matData[i].time;
+                const maturity = matData[i].maturity;
+
+                const strength = params.mix.ultimate_strength *
+                               (1 - Math.exp(-params.mix.rate_constant * maturity));
+                const tensileStrength = strength * params.mix.tensile_strength_factor;
+
+                const formRemovalReady = strength >= 0.15 * params.mix.ultimate_strength;
+                const loadingReady = strength >= 0.75 * params.mix.ultimate_strength;
+
+                strData.push({ time, strength, tensileStrength, formRemovalReady, loadingReady });
+            }
+            return strData;
+        }
+
+         function calculateInternalHumidity(tempData, params, config) {
+            const humData = [];
+            let internalHumidity = 100; // Start at 100%
+
+            for (let i = 0; i < tempData.length; i++) {
+                 const time = tempData[i].time;
+                 const hydrationDegree = tempData[i].hydrationDegree;
+                 const prevHydration = i > 0 ? tempData[i-1].hydrationDegree : 0;
+
+                 // Simplified model
+                 const hydrationEffect = 5 * Math.max(0, (hydrationDegree - prevHydration)); // Prevent negative effect
+                 const evaporationEffect = 0.02 * Math.sqrt(Math.max(0,time) + 1); // Prevent sqrt of negative
+
+                 internalHumidity = Math.max(40, internalHumidity - hydrationEffect - evaporationEffect);
+
+                 humData.push({ time, internalHumidity, hydrationDegree });
+             }
+             return humData;
+        }
+
+        function calculateRiskFactors(tempData, ambient, strData, params, config) {
+            const rData = [];
+            for (let i = 0; i < tempData.length; i++) {
+                const time = tempData[i].time;
+                const coreTemp = tempData[i].coreTemperature;
+                const surfaceTemp = tempData[i].surfaceTemperature;
+                const ambientTemp = ambient[i].temperature;
+                const windSpeed = ambient[i].windSpeed;
+                const humidity = ambient[i].humidity;
+                const tensileStrength = strData[i]?.tensileStrength || 0;
+
+                const thermalGradient = Math.abs(coreTemp - surfaceTemp);
+
+                // Evaporation Rate (simplified placeholder - original had Penman, requires more care)
+                // const surfaceSVP = calculateSVP(surfaceTemp);
+                // const ambientSVP = calculateSVP(ambientTemp);
+                // const airVP = ambientSVP * humidity / 100;
+                // const evaporationRate = 5.9 * (surfaceSVP - airVP) * (0.5 + 0.35 * windSpeed) / 1000;
+                const evaporationRate = Math.max(0, (surfaceTemp - ambientTemp) * (1 + windSpeed) * 0.01); // Very rough proxy
+
+                // Thermal Stress
+                 const thermalStress = thermalGradient *
+                                    params.mix.modulus_elasticity *
+                                    params.mix.thermal_expansion *
+                                    config.restraint_degree /
+                                    params.mix.creep_factor;
+
+                 let crackingRisk = 'low';
+                 if (tensileStrength > 0 && thermalStress > tensileStrength * 0.7) {
+                    crackingRisk = thermalStress > tensileStrength * 0.9 ? 'high' : 'medium';
+                 }
+
+                 rData.push({ time, thermalGradient, evaporationRate, thermalStress, crackingRisk });
+            }
+            return rData;
+        }
+
+        // --- Simulation Control ---
+
+        function initializeSimulationData() {
+            try {
+                simulationParameters = { mix: mixLibrary[selectedMix] }; // Load selected mix
+
+                ambientData = generateAmbientConditions(simulationParameters, simConfig);
+                temperatureData = simulateConcreteTemperature(ambientData, simulationParameters, simConfig);
+                maturityData = calculateMaturity(temperatureData, simulationParameters, simConfig, maturityMethod, datumTemperature, activationEnergy, cValue);
+                strengthData = calculateStrength(maturityData, simulationParameters, simConfig);
+                humidityData = calculateInternalHumidity(temperatureData, simulationParameters, simConfig); // Use temperatureData which has hydrationDegree
+                riskData = calculateRiskFactors(temperatureData, ambientData, strengthData, simulationParameters, simConfig);
+
+                // Update charts with full data initially (or empty if needed)
+                 updateCharts(true); // Reset charts
+
+            } catch (error) {
+                console.error("Error initializing simulation data:", error);
+                alert("Failed to initialize simulation. Check console for errors.");
+            }
+        }
+
+        function updateSimulation(timestamp) {
+            if (!isRunning) return;
+
+            const now = Date.now();
+            const deltaTime = (now - lastUpdateTime) / 1000; // seconds
+
+            // Avoid large jumps if tab was inactive
+            if (deltaTime > 1) {
+                 lastUpdateTime = now;
+                 animationFrameId = requestAnimationFrame(updateSimulation);
+                 return;
+            }
+
+            const simulationDeltaTime = (deltaTime * simulationSpeed) / 60; // hours
+            const newTime = Math.min(simConfig.duration, currentTime + simulationDeltaTime);
+
+            currentTime = newTime;
+            lastUpdateTime = now;
+
+            updateDisplay();
+            updateCharts(); // Update charts with sliced data
+
+            if (newTime >= simConfig.duration) {
+                pauseSimulation();
+                currentTime = simConfig.duration; // Ensure it ends exactly at duration
+                updateDisplay(); // Final update
+                updateCharts();
+            } else {
+                animationFrameId = requestAnimationFrame(updateSimulation);
+            }
+        }
+
+        function playSimulation() {
+            if (isRunning) return;
+            isRunning = true;
+            playPauseBtn.textContent = 'Pause';
+            playPauseBtn.className = 'pause-btn';
+            lastUpdateTime = Date.now(); // Reset timer reference point
+            animationFrameId = requestAnimationFrame(updateSimulation);
+        }
+
+        function pauseSimulation() {
+            if (!isRunning) return;
+            isRunning = false;
+            playPauseBtn.textContent = 'Play';
+            playPauseBtn.className = 'play-btn';
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        function toggleSimulation() {
+            if (isRunning) {
+                pauseSimulation();
+            } else {
+                 // If at the end, reset before playing again
+                 if (currentTime >= simConfig.duration) {
+                     resetSimulationInternal();
+                 }
+                playSimulation();
+            }
+        }
+
+         // Internal reset logic without re-initializing data unless needed
+         function resetSimulationInternal() {
+            pauseSimulation();
+            currentTime = 0;
+            updateDisplay();
+            updateCharts(true); // Reset charts visually
+         }
+
+        // Full reset including data recalculation
+        function resetSimulation() {
+            resetSimulationInternal();
+            // Optional: force data re-init if needed, but usually only needed on param change
+            // initializeSimulationData();
+            // updateDisplay(); // Update display with initial values
+        }
+
+        // --- Display & Chart Updates ---
+
+        function updateDisplay() {
+            currentTimeDisplay.textContent = formatTime(currentTime);
+
+            // Find the closest data index
+            const index = Math.min(
+                Math.floor(currentTime / simConfig.time_step),
+                temperatureData.length - 1
+            );
+
+            if (index < 0 || !temperatureData[index]) return; // Data not ready
+
+            const tempPoint = temperatureData[index];
+            const strPoint = strengthData[index];
+            const humPoint = humidityData[index];
+            const riskPoint = riskData[index];
+
+            coreTempValue.textContent = `${tempPoint.coreTemperature.toFixed(1)}°C`;
+            surfaceTempValue.textContent = `${tempPoint.surfaceTemperature.toFixed(1)}°C`;
+            ambientTempValue.textContent = `${tempPoint.ambientTemperature.toFixed(1)}°C`;
+
+            const ultimateStr = simulationParameters.mix.ultimate_strength;
+            const currentStr = strPoint.strength;
+            const strPercent = Math.min(100, Math.max(0, Math.round(currentStr / ultimateStr * 100)));
+            strengthValue.textContent = `${currentStr.toFixed(1)} MPa`;
+            strengthProgress.style.width = `${strPercent}%`;
+            strengthPercent.textContent = strPercent;
+            designStrength.textContent = ultimateStr.toFixed(0);
+
+
+            const hydrationDeg = humPoint.hydrationDegree;
+            const hydPercent = Math.min(100, Math.max(0, Math.round(hydrationDeg * 100)));
+            humidityValue.textContent = `${humPoint.internalHumidity.toFixed(1)}%`;
+             hydrationProgress.style.width = `${hydPercent}%`;
+             hydrationPercent.textContent = hydPercent;
+
+
+            gradientValue.textContent = `${riskPoint.thermalGradient.toFixed(1)}°C`;
+            stressValue.textContent = `${riskPoint.thermalStress.toFixed(1)} MPa`;
+            tensileStrengthValue.textContent = `${strPoint.tensileStrength.toFixed(1)} MPa`;
+            crackingRiskValue.textContent = riskPoint.crackingRisk.toUpperCase();
+            crackingRiskValue.className = getRiskClass(riskPoint.crackingRisk);
+
+            formRemovalStatus.textContent = strPoint.formRemovalReady ? 'Yes' : 'No';
+            formRemovalStatus.style.color = strPoint.formRemovalReady ? 'green' : 'red';
+            loadingReadyStatus.textContent = strPoint.loadingReady ? 'Yes' : 'No';
+            loadingReadyStatus.style.color = strPoint.loadingReady ? 'green' : 'red';
+
+        }
+
+        function getCurrentDataSlice(dataArray) {
+            if (!dataArray || dataArray.length === 0) return [];
+            const currentIndex = Math.min(
+                Math.floor(currentTime / simConfig.time_step),
+                dataArray.length - 1
+            );
+            // Slice efficiently: Chart.js can often handle the full dataset and just render up to a point,
+            // but slicing ensures we only pass what's needed if the library requires it.
+            // For performance with large datasets, consider passing full data and controlling visibility/range.
+            return dataArray.slice(0, currentIndex + 1);
+        }
+
+        function initCharts() {
+            const ctxTemp = document.getElementById('temperatureChart').getContext('2d');
+            const ctxStrength = document.getElementById('strengthChart').getContext('2d');
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: { display: true, text: 'Time (hours)' },
+                        ticks: {
+                             callback: function(value, index, values) {
+                                 return formatTime(value); // Format ticks as Days/Hours
+                             }
+                        },
+                         min: 0,
+                         max: simConfig.duration
+                    },
+                    y: { beginAtZero: true }
+                },
+                 plugins: {
+                     legend: { position: 'top' },
+                     tooltip: {
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                // Display time in tooltip title
+                                return `Time: ${formatTime(tooltipItems[0].parsed.x)}`;
+                            }
+                        }
+                     }
+                 },
+                animation: false // Disable animation for faster updates during simulation loop
+            };
+
+            tempChart = new Chart(ctxTemp, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        { label: 'Core Temp (°C)', data: [], borderColor: '#ef4444', tension: 0.1, pointRadius: 0 },
+                        { label: 'Surface Temp (°C)', data: [], borderColor: '#f59e0b', tension: 0.1, pointRadius: 0 },
+                        { label: 'Ambient Temp (°C)', data: [], borderColor: '#3b82f6', tension: 0.1, pointRadius: 0 }
+                    ]
+                },
+                options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: {display: true, text: 'Temperature (°C)'}} }}
+            });
+
+            strengthChart = new Chart(ctxStrength, {
+                 type: 'line',
+                 data: {
+                     datasets: [
+                         { label: 'Compressive Strength (MPa)', data: [], borderColor: '#3b82f6', tension: 0.1, pointRadius: 0 },
+                         { label: 'Tensile Strength (MPa)', data: [], borderColor: '#8b5cf6', tension: 0.1, pointRadius: 0 }
+                         // Could add reference lines using plugins or annotations if needed
+                     ]
+                 },
+                 options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: {display: true, text: 'Strength (MPa)'}, max: mixLibrary[selectedMix].ultimate_strength * 1.1 } }} // Adjust max based on mix
+             });
+        }
+
+         function updateCharts(reset = false) {
+            if (!tempChart || !strengthChart) return;
+
+             const currentTempSlice = reset ? [] : getCurrentDataSlice(temperatureData);
+             const currentStrengthSlice = reset ? [] : getCurrentDataSlice(strengthData);
+
+             // Prepare data for Chart.js {x, y} format
+             const formatChartData = (slice, yKey) => slice.map(d => ({ x: d.time, y: d[yKey] }));
+
+             tempChart.data.datasets[0].data = formatChartData(currentTempSlice, 'coreTemperature');
+             tempChart.data.datasets[1].data = formatChartData(currentTempSlice, 'surfaceTemperature');
+             tempChart.data.datasets[2].data = formatChartData(currentTempSlice, 'ambientTemperature');
+
+             strengthChart.data.datasets[0].data = formatChartData(currentStrengthSlice, 'strength');
+             strengthChart.data.datasets[1].data = formatChartData(currentStrengthSlice, 'tensileStrength');
+              // Update Y-axis max for strength chart if mix changed
+             strengthChart.options.scales.y.max = mixLibrary[selectedMix].ultimate_strength * 1.1;
+
+
+             tempChart.update('none'); // 'none' prevents animation during updates
+             strengthChart.update('none');
+        }
+
+        // --- Event Handlers ---
+        function handleSpeedChange(event) {
+            simulationSpeed = Number(event.target.value);
+            let label = '';
+            if (simulationSpeed < 60) {
+                label = `${simulationSpeed} min/sec`;
+            } else if (simulationSpeed === 60) {
+                label = `1 hour/sec`;
+            } else if (simulationSpeed < 1440) {
+                 label = `${Math.round(simulationSpeed/60)} hours/sec`;
+            } else {
+                label = `1 day/sec`;
+            }
+            speedLabel.textContent = label;
+        }
+
+        function handleMixChange(event) {
+             selectedMix = event.target.value;
+             // Stop simulation, recalculate data, reset time, update charts/display
+             pauseSimulation();
+             initializeSimulationData();
+             resetSimulationInternal(); // Reset time and visual state
+             updateDisplay(); // Show initial state for new mix
+        }
+
+        function handleMaturityChange(event) {
+             maturityMethod = event.target.value;
+             updateMaturityParamsUI();
+             // Stop simulation, recalculate data, reset time, update charts/display
+             pauseSimulation();
+             initializeSimulationData();
+             resetSimulationInternal();
+             updateDisplay();
+        }
+
+        function updateMaturityParamsUI() {
+             let html = '';
+             if (maturityMethod === 'nurse-saul') {
+                 html = `
+                     <label for="datumTempSelect">Datum Temperature:</label>
+                     <select id="datumTempSelect">
+                         <option value="0" ${datumTemperature === 0 ? 'selected' : ''}>0°C</option>
+                         <option value="-5" ${datumTemperature === -5 ? 'selected' : ''}>-5°C</option>
+                         <option value="-10" ${datumTemperature === -10 ? 'selected' : ''}>-10°C</option>
+                     </select>`;
+             } else if (maturityMethod === 'equivalent-age') {
+                 html = `
+                     <label for="activationEnergyInput">Activation Energy/R (K):</label>
+                     <input type="number" id="activationEnergyInput" value="${activationEnergy}" style="width: 80px;"> K`;
+             } else if (maturityMethod === 'weighted') {
+                 html = `
+                     <label for="cValueInput">C-Value:</label>
+                     <input type="number" id="cValueInput" step="0.05" min="1.25" max="1.75" value="${cValue}" style="width: 60px;">`;
+             }
+             maturityParamsDiv.innerHTML = html;
+
+             // Add event listeners for the newly created elements
+             if (maturityMethod === 'nurse-saul') {
+                 document.getElementById('datumTempSelect').addEventListener('change', (e) => {
+                     datumTemperature = Number(e.target.value);
+                     handleMaturityChange(e); // Trigger recalculation
+                 });
+             } else if (maturityMethod === 'equivalent-age') {
+                 document.getElementById('activationEnergyInput').addEventListener('change', (e) => {
+                     activationEnergy = Number(e.target.value);
+                     handleMaturityChange(e);
+                 });
+             } else if (maturityMethod === 'weighted') {
+                  document.getElementById('cValueInput').addEventListener('change', (e) => {
+                     cValue = Number(e.target.value);
+                     handleMaturityChange(e);
+                 });
+             }
+        }
+
+
+        // --- Initialization ---
+        function init() {
+            // Populate mix dropdown
+            Object.keys(mixLibrary).forEach(mixId => {
+                const option = document.createElement('option');
+                option.value = mixId;
+                option.textContent = mixLibrary[mixId].name;
+                if (mixId === selectedMix) option.selected = true;
+                mixSelect.appendChild(option);
+            });
+
+            // Set initial UI state
+            speedSlider.value = simulationSpeed;
+            handleSpeedChange({ target: speedSlider }); // Update label
+            updateMaturityParamsUI();
+
+            // Add event listeners
+            playPauseBtn.addEventListener('click', toggleSimulation);
+            resetBtn.addEventListener('click', resetSimulation);
+            speedSlider.addEventListener('input', handleSpeedChange);
+            mixSelect.addEventListener('change', handleMixChange);
+            maturityMethodSelect.addEventListener('change', handleMaturityChange);
+
+            // Initialize charts
+            initCharts();
+
+            // Generate initial data and display
+            initializeSimulationData();
+            updateDisplay(); // Show time=0 state
+
+             // Optionally auto-start
+             // setTimeout(playSimulation, 500);
+
+        }
+
+        // Run initialization when the page is ready
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+
+</body>
+</html>
